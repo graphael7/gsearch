@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 
 from django.shortcuts import render
 
-from django.shortcuts     import redirect
+from django.shortcuts     import render_to_response
 from django.views.generic import ListView
 from color_liker.models   import Color
 
@@ -98,4 +98,6 @@ def toggle_color_like(request, color_id):
 
     #print("post-toggle: color_id=" + str(color_id) + ", color.is_favorited=" + str(color.is_favorited) + "")
 
-    return  redirect("color_list")  #See urls.py
+    #Render the just-clicked-on like-button.
+    return  render_to_response("color_liker/color_like_link__html_snippet.txt",
+                           {"color": color})

@@ -15,71 +15,73 @@ the template.
 """
 class ColorList(ListView):
     """
-    Displays all colors in a table with only two columns: the name of the
-    color, and a "like/unlike" button.
+    Displays all colors in a table with only two columns: the name
+    of the color, and a "like/unlike" button.
     """
     model = Color
     context_object_name = "colors"
 
     def dispatch(self, request, *args, **kwargs):
-        self.request = request     #So get_context_data can access it.
         return super(ColorList, self).dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
         """
-        Returns the all colors, for display in the main table. The search
-        result query set, if any, is passed as context.
+        This returns the all colors, for display in the main table.
+
+        The search result query set, if any, is passed as context.
         """
         return  super(ColorList, self).get_queryset()
 
     def get_context_data(self, **kwargs):
-        #The current context.
+        #Get the current context.
         context = super(ColorList, self).get_context_data(**kwargs)
 
-        global  MIN_SEARCH_CHARS
-
-        search_text = ""   #Assume no search
-        if(self.request.method == "GET"):
-            """
-            The search form has been submitted. Get the search text from
-            it. If it's less than MIN_SEARCH_CHARS characters, ignore the
-            request.
-
-            Must be GET, not post.
-            - http://stackoverflow.com/questions/25878993/django-view-works-with-default-call-but-form-submission-to-same-view-only-calls
-
-            Also, must use
-
-                if(self.request.method == "GET")
-
-            not
-
-                if(self.request.GET)
-
-            https://docs.djangoproject.com/en/1.7/ref/request-response/#django.http.HttpRequest.method
-            https://docs.djangoproject.com/en/1.7/ref/request-response/#django.http.HttpRequest.POST
-            """
-            search_text = self.request.GET.get("search_text", "").strip().lower()
-            if(len(search_text) < MIN_SEARCH_CHARS):
-                search_text = ""   #Ignore search
-
-        if(search_text != ""):
-            color_search_results = Color.objects.filter(name__contains=search_text)
-        else:
-            #An empty list instead of None. In the template, use
-            #  {% if color_search_results.count > 0 %}
-            color_search_results = []
-
-        #Add items to the context:
-
-        #The search text for display and result set
-        context["search_text"] = search_text
-        context["color_search_results"] = color_search_results
-
-        #For display under the search form
         context["MIN_SEARCH_CHARS"] = MIN_SEARCH_CHARS
 
         return  context
+
+def submit_color_search_from_ajax(request):
+    """
+    Processes a search request, ignoring any where less than two
+    characters are provided. The search text is both trimmed and
+    lower-cased.
+
+    See <link to MIN_SEARCH_CHARS>
+    """
+
+    colors = []  #Assume no results.
+
+    global  MIN_SEARCH_CHARS
+
+    search_text = ""   #Assume no search
+    if(request.method == "GET"):
+        search_text = request.GET.get("color_search_text", "").strip().lower()
+        if(len(search_text) < MIN_SEARCH_CHARS):
+            """
+            Ignore the search. This is also validated by
+            JavaScript, and should never reach here, but remains
+            as prevention.
+            """
+            search_text = ""
+
+    #Assume no results.
+    #Use an empty list instead of None. In the template, use
+    #   {% if color_search_results.count > 0 %}
+    color_results = []
+
+    if(search_text != ""):
+        color_results = Color.objects.filter(name__contains=search_text)
+
+    #print('search_text="' + search_text + '", results=' + str(color_results))
+
+    context = {
+        "search_text": search_text,
+        "color_search_results": color_results,
+        "MIN_SEARCH_CHARS": MIN_SEARCH_CHARS,
+    };
+
+    return  render_to_response("color_liker/color_search_results__html_snippet.txt",
+                               context)
 
 def toggle_color_like(request, color_id):
     """Toggle "like" for a single color, then refresh the color-list page."""
